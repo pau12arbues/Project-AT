@@ -22,14 +22,6 @@ public class Station {
 
     private String status;
 
-    // Extra fields from my previous impl, user didn't explicitly forbid but didn't
-    // list.
-    // I'll keep them as they are useful for the map/frontend potentially,
-    // but the user's snippet didn't have them. I will keep them for now but use
-    // their naming convention.
-    private double lat;
-    private double lon;
-
     public Station() {
     }
 
@@ -89,22 +81,6 @@ public class Station {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public double getLat() {
-        return lat;
-    }
-
-    public void setLat(double lat) {
-        this.lat = lat;
-    }
-
-    public double getLon() {
-        return lon;
-    }
-
-    public void setLon(double lon) {
-        this.lon = lon;
     }
 
     @Override

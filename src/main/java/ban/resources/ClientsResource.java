@@ -1,20 +1,21 @@
 package ban.resources;
 
 import ban.model.Client;
-import ban.services.ClientStorage;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.List;
 
 @Path("/clients")
 public class ClientsResource {
 
-    private ClientStorage storage = new ClientStorage();
+    // Helper static list to simulate storage
+    private static List<Client> clients = new ArrayList<>();
 
     /**
      * POST /ban/clients/subscribe
-     * Suscribe un cliente a estaciones (SIN verificar edad en demo intermedia)
+     * Subscribe client to stations.
      */
     @POST
     @Path("/subscribe")
@@ -22,21 +23,33 @@ public class ClientsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response subscribeClient(Client client) {
         try {
-            // Validaciones básicas
+            // 1. Validate Phone
             if (client.getPhoneNumber() == null || client.getPhoneNumber().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("{\"error\": \"Phone number is required\"}")
                         .build();
             }
 
+            // 2. Validate Stations
             if (client.getStationsIds() == null || client.getStationsIds().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("{\"error\": \"At least one station ID is required\"}")
                         .build();
             }
 
-            // Guardar cliente (sin verificar edad por ahora)
-            storage.addClient(client);
+            // 3. Validate Telegram Data (Strict Requirement)
+            if (client.getTelegramToken() == null || client.getTelegramToken().isEmpty() || client.getChatId() == 0) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\": \"Telegram token and Chat ID are required\"}")
+                        .build();
+            }
+
+            // Add to list
+            synchronized (clients) {
+                clients.add(client);
+            }
+
+            System.out.println("[ClientsResource] Subscribed: " + client.getPhoneNumber());
 
             return Response.status(Response.Status.CREATED)
                     .entity("{\"message\": \"Client subscribed successfully\", " +
@@ -53,14 +66,13 @@ public class ClientsResource {
 
     /**
      * GET /ban/clients/list
-     * Devuelve la lista de todos los clientes suscritos
+     * Returns the list of clients.
      */
     @GET
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getClients() {
         try {
-            List<Client> clients = storage.getAllClients();
             return Response.ok(clients).build();
         } catch (Exception e) {
             e.printStackTrace();
