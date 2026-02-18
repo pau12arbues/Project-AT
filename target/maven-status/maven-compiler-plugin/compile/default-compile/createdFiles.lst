@@ -1,6 +1,9 @@
+ban/resources/StationsResource.class
+ban/resources/ClientsResource.class
 ban/model/Client.class
 ban/model/Data.class
 ban/clients/BicingClient.class
 ban/model/Station.class
 ban/clients/BicingClient$1.class
+ban/VerificationMain.class
 ban/model/Stations.class

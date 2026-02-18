@@ -8,9 +8,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Date;
+import org.apache.log4j.Logger;
 
 @Path("/stations")
 public class StationsResource {
+
+    final static Logger logger = Logger.getLogger(StationsResource.class);
 
     // Cache logic integrated directly into the Resource
     private static Data cachedData = null;
@@ -37,26 +40,26 @@ public class StationsResource {
 
             // Logic: If cache is empty OR expired -> Fetch from Bicing API
             if (cachedData == null || (currentTime - lastUpdateTime) > CACHE_DURATION_MS) {
-                System.out.println("[StationsResource] Cache expired or empty. Fetching from Bicing API...");
+                logger.info("[StationsResource] Cache expired or empty. Fetching from Bicing API...");
                 try {
                     Data data = bicingClient.getBicingStations();
 
                     if (data != null && data.getData() != null) {
                         cachedData = data;
                         lastUpdateTime = currentTime;
-                        System.out.println("[StationsResource] Cache updated at " + new Date(lastUpdateTime));
+                        logger.info("[StationsResource] Cache updated at " + new Date(lastUpdateTime));
                     } else {
-                        System.err.println("[StationsResource] Received null data from Bicing API");
+                        logger.error("[StationsResource] Received null data from Bicing API");
                     }
                 } catch (Exception e) {
-                    System.err.println("[StationsResource] Error fetching from API: " + e.getMessage());
+                    logger.error("[StationsResource] Error fetching from API: " + e.getMessage());
                     e.printStackTrace();
                     // If we have old data, maybe we could return it?
                     // But requirement implies strict fetch on expiry.
                     // If fetch fails, we return error if we have no data.
                 }
             } else {
-                System.out.println("[StationsResource] Returning cached data");
+                logger.debug("[StationsResource] Returning cached data");
             }
 
             if (cachedData == null) {
