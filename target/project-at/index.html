@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BAN - Bicing Air Quality Notifier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 3px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        .response {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚴 BAN - Bicing Air Quality Notifier</h1>
+    <p>Demo Intermedia - 20 Feb 2026</p>
+
+    <!-- SECCIÓN 1: GET STATIONS -->
+    <div class="section">
+        <h2>1. Get Stations</h2>
+        <p>Obtener lista de estaciones Bicing</p>
+        <button onclick="getStations()">Get Stations</button>
+        <div id="stationsResponse" class="response"></div>
+    </div>
+
+    <!-- SECCIÓN 2: SUBSCRIBE CLIENT -->
+    <div class="section">
+        <h2>2. Subscribe Client</h2>
+        <p>Suscribir un cliente a estaciones</p>
+        
+        <label>Phone Number:</label>
+        <input type="text" id="phoneNumber" placeholder="+34600000000">
+        
+        <label>Telegram Token:</label>
+        <input type="text" id="telegramToken" placeholder="123456:ABC-DEF...">
+        
+        <label>Chat ID:</label>
+        <input type="number" id="chatId" placeholder="123456789">
+        
+        <label>Station IDs (comma separated):</label>
+        <input type="text" id="stationsIds" placeholder="1, 2, 3">
+        
+        <button onclick="subscribeClient()">Subscribe Client</button>
+        <div id="subscribeResponse" class="response"></div>
+    </div>
+
+    <!-- SECCIÓN 3: GET CLIENTS -->
+    <div class="section">
+        <h2>3. Get Clients</h2>
+        <p>Obtener lista de clientes suscritos</p>
+        <button onclick="getClients()">Get Clients</button>
+        <div id="clientsResponse" class="response"></div>
+    </div>
+
+    <script>
+        // URL base de tu API (cambiar cuando despliegues en AWS)
+        // const BASE_URL = "http://localhost:8080/ban";
+        // Assuming the app is deployed at root or under project context. 
+        // If deployed as ROOT.war -> /ban
+        // If deployed as project-at.war -> /project-at/ban
+        // Let's try relative path or assume /project-at/ban if we deploy with that name.
+        // For local testing (mvn jetty or similar) we might need full URL.
+        // The user says "http://localhost:8080/ban" in their specific HTML code provided.
+        // But context path depends on deployment. 
+        // I'll stick to what the user provided:
+        const BASE_URL = "http://localhost:8080/project-at/ban"; 
+        // Note: Pom finalName is 'project-at', so usually TomCat deploys at /project-at. 
+        // My endpoints are @Path("/ban/..."). 
+        // So full URL is http://localhost:8080/project-at/ban/...
+        // User's example had http://localhost:8080/ban but that implies ROOT deployment or context path change.
+        // I will use /project-at/ban to be safe with standard deployment.
+
+        /**
+         * 1. GET STATIONS
+         */
+        function getStations() {
+            const responseDiv = document.getElementById("stationsResponse");
+            responseDiv.innerHTML = "Loading...";
+            
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        const data = JSON.parse(xhr.responseText);
+                        responseDiv.innerHTML = JSON.stringify(data, null, 2);
+                    } else {
+                        responseDiv.innerHTML = "Error: " + xhr.status + "\n" + xhr.responseText;
+                    }
+                }
+            };
+            xhr.open("GET", BASE_URL + "/stations/list", true);
+            xhr.send();
+        }
+
+        /**
+         * 2. SUBSCRIBE CLIENT
+         */
+        function subscribeClient() {
+            const responseDiv = document.getElementById("subscribeResponse");
+            responseDiv.innerHTML = "Processing...";
+            
+            // Obtener valores del formulario
+            const phoneNumber = document.getElementById("phoneNumber").value;
+            const telegramToken = document.getElementById("telegramToken").value;
+            const chatId = document.getElementById("chatId").value;
+            const stationsIdsInput = document.getElementById("stationsIds").value;
+            
+            // Validaciones básicas
+            if (!phoneNumber || !telegramToken || !chatId || !stationsIdsInput) {
+                responseDiv.innerHTML = "Error: All fields are required";
+                return;
+            }
+            
+            // Convertir stationsIds a array de números
+            const stationsIds = stationsIdsInput
+                .replace(/\s/g, "")
+                .split(",")
+                .map(id => parseInt(id));
+            
+            // Crear objeto JSON
+            const clientData = {
+                phoneNumber: phoneNumber,
+                telegramToken: telegramToken,
+                chatId: parseInt(chatId),
+                stationsIds: stationsIds
+            };
+            
+            // Hacer POST
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 201 || xhr.status == 200) {
+                        responseDiv.innerHTML = "✅ Success!\n\n" + xhr.responseText;
+                    } else {
+                        responseDiv.innerHTML = "❌ Error: " + xhr.status + "\n" + xhr.responseText;
+                    }
+                }
+            };
+            xhr.open("POST", BASE_URL + "/clients/subscribe", true);
+            xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+            xhr.send(JSON.stringify(clientData));
+        }
+
+        /**
+         * 3. GET CLIENTS
+         */
+        function getClients() {
+            const responseDiv = document.getElementById("clientsResponse");
+            responseDiv.innerHTML = "Loading...";
+            
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        const data = JSON.parse(xhr.responseText);
+                        responseDiv.innerHTML = JSON.stringify(data, null, 2);
+                    } else {
+                        responseDiv.innerHTML = "Error: " + xhr.status + "\n" + xhr.responseText;
+                    }
+                }
+            };
+            xhr.open("GET", BASE_URL + "/clients/list", true);
+            xhr.send();
+        }
+    </script>
+</body>
+</html>

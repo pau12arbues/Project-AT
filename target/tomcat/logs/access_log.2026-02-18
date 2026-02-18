@@ -1,9 +1,0 @@
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:25:44 +0100] "GET /project-at/ban/stations/list HTTP/1.1" 200 78114 http-bio-8080-exec-1 2888
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:25:44 +0100] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8080-exec-2 0
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:25:56 +0100] "GET /project-at/ban HTTP/1.1" 404 967 http-bio-8080-exec-3 7
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:26:25 +0100] "GET /project-at/index.html HTTP/1.1" 304 - http-bio-8080-exec-4 2
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:26:38 +0100] "GET /project-at/ban/stations/list HTTP/1.1" 200 78114 http-bio-8080-exec-5 10
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:26:57 +0100] "GET /project-at/ban/stations/list HTTP/1.1" 200 78114 http-bio-8080-exec-6 7
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:26:57 +0100] "GET /project-at/ban/stations/list HTTP/1.1" 200 78114 http-bio-8080-exec-7 6
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:26:58 +0100] "GET /project-at/ban/stations/list HTTP/1.1" 200 78114 http-bio-8080-exec-8 4
-0:0:0:0:0:0:0:1 - - [18/Feb/2026:09:30:42 +0100] "GET /project-at/ban/stations/list HTTP/1.1" 200 78107 http-bio-8080-exec-10 1578
