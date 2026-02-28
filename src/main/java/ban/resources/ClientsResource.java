@@ -1,17 +1,31 @@
 package ban.resources;
 
 import ban.model.Client;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.List;
+
+import ban.clients.BicingClient;
+import ban.clients.OpenGatewayClient;
+import ban.clients.TelegramClient;
+import ban.model.Data;
+import ban.model.Message;
+import ban.model.Station;
 
 @Path("/clients")
 public class ClientsResource {
 
     // Helper static list to simulate storage
     private static List<Client> clients = new ArrayList<>();
+
+    /** Permite a otros Resources acceder a la lista de clientes. */
+    public static List<Client> getClientsList() {
+        return clients;
+    }
 
     /**
      * POST /ban/clients/subscribe
@@ -44,12 +58,78 @@ public class ClientsResource {
                         .build();
             }
 
+            // 3.5 Validate Age using Open Gateway API
+            OpenGatewayClient openGatewayClient = new OpenGatewayClient();
+            boolean isOver18 = false;
+            try {
+                isOver18 = openGatewayClient.isAgeVerified(client.getPhoneNumber());
+            } catch (Exception ex) {
+                System.out.println("[ClientsResource] OpenGateway API Exception: " + ex.getMessage());
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity("{\"error\": \"Age verification error: " + ex.getMessage().replace("\"", "\\\"")
+                                + "\"}")
+                        .build();
+            }
+
+            if (!isOver18) {
+                System.out.println("[ClientsResource] Age verification failed for: " + client.getPhoneNumber());
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity("{\"error\": \"User must be 23 or older\"}")
+                        .build();
+            }
+
             // Add to list
             synchronized (clients) {
                 clients.add(client);
             }
 
             System.out.println("[ClientsResource] Subscribed: " + client.getPhoneNumber());
+
+            // 4. Fetch Bicing Data and Send Telegram Message
+            try {
+                BicingClient bicingClient = new BicingClient();
+                Data bicingData = bicingClient.getBicingStations();
+                List<Station> allStations = bicingData.getData().getStations();
+
+                // Construct the summary message
+                StringBuilder messageBuilder = new StringBuilder();
+                messageBuilder
+                        .append("¡Hola! Te has suscrito correctamente.\nAquí tienes el estado de tus estaciones:\n\n");
+
+                boolean foundStations = false;
+                for (Integer reqStationId : client.getStationsIds()) {
+                    for (Station station : allStations) {
+                        if (station.getStation_id() == reqStationId) {
+                            foundStations = true;
+                            messageBuilder.append("🚴 Estación ").append(reqStationId).append(":\n")
+                                    .append("Bicis libres: ").append(station.getNum_bikes_available()).append("\n")
+                                    .append("Anclajes libres: ").append(station.getNum_docks_available())
+                                    .append("\n\n");
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundStations) {
+                    messageBuilder
+                            .append("Lo sentimos, no hemos podido encontrar datos para las estaciones solicitadas.");
+                }
+
+                // Send Telegram Message
+                TelegramClient telegramClient = new TelegramClient();
+                Message telegramMessage = new Message(String.valueOf(client.getChatId()), messageBuilder.toString());
+                boolean sent = telegramClient.sendMessage(client.getTelegramToken(), telegramMessage);
+
+                if (!sent) {
+                    System.err.println("[ClientsResource] No se pudo enviar el mensaje a Telegram para el cliente "
+                            + client.getPhoneNumber());
+                }
+            } catch (Exception ex) {
+                System.err.println(
+                        "[ClientsResource] Error al obtener datos de Bicing o enviar Telegram: " + ex.getMessage());
+                // We shouldn't fail the subscription if the notification fails, so we just log
+                // the error
+            }
 
             return Response.status(Response.Status.CREATED)
                     .entity("{\"message\": \"Client subscribed successfully\", " +

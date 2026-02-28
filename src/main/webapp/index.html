@@ -622,6 +622,52 @@
             <div id="clientsResponse" class="response"></div>
         </div>
 
+        <!-- ─── Section 4: Notify Slots ──────────────────── -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-number">4</span>
+                <h2>Notify Slots</h2>
+            </div>
+            <p class="description">Send a Telegram message with the free slots for your subscribed stations</p>
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="notifySlotsPhone">Phone Number</label>
+                    <input type="text" id="notifySlotsPhone" placeholder="+34 600 000 001">
+                </div>
+            </div>
+
+            <button class="btn" onclick="notifySlots()" style="margin-top: 8px;">
+                <span class="btn-icon">🚲</span> Notify Slots
+            </button>
+            <div id="notifySlotsResponse" class="response"></div>
+        </div>
+
+        <!-- ─── Section 5: Notify Air Quality ────────────── -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-number">5</span>
+                <h2>Notify Air Quality</h2>
+            </div>
+            <p class="description">Resolve your IP to a city and send the real-time Air Quality Index via Telegram</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="notifyAqiPhone">Phone Number</label>
+                    <input type="text" id="notifyAqiPhone" placeholder="+34 600 000 001">
+                </div>
+                <div class="form-group">
+                    <label for="notifyAqiIp">Device IP (auto-detected)</label>
+                    <input type="text" id="notifyAqiIp" placeholder="Detecting your IP...">
+                </div>
+            </div>
+
+            <button class="btn" onclick="notifyAirQuality()" style="margin-top: 8px;">
+                <span class="btn-icon">🌍</span> Notify Air Quality
+            </button>
+            <div id="notifyAqiResponse" class="response"></div>
+        </div>
+
         <!-- ─── Footer ─────────────────────────────────────── -->
         <footer class="footer">
             BAN · Bicing Air Quality Notifier · UPF — Aplicaciones Telemáticas 2026
@@ -630,6 +676,36 @@
 
     <script>
         const BASE_URL = "http://localhost:8080/project-at/ban";
+
+        /* ── Auto-detect public IP ──────────────────────── */
+        var detectedIp = null;
+
+        function detectPublicIp(callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            if (data.status === "success" && data.query) {
+                                detectedIp = data.query;
+                                var ipField = document.getElementById("notifyAqiIp");
+                                if (ipField && !ipField.value) {
+                                    ipField.value = detectedIp;
+                                    ipField.placeholder = detectedIp;
+                                }
+                            }
+                        } catch (e) { /* silently ignore */ }
+                    }
+                    if (callback) callback(detectedIp);
+                }
+            };
+            xhr.open("GET", "http://ip-api.com/json/", true);
+            xhr.send();
+        }
+
+        // Auto-detect on page load
+        detectPublicIp();
 
         /* ── Helper: show response panel ─────────────────── */
         function showResponse(el, content) {
@@ -729,6 +805,75 @@
             };
             xhr.open("GET", BASE_URL + "/clients/list", true);
             xhr.send();
+        }
+
+        /**
+         * 4. NOTIFY SLOTS
+         */
+        function notifySlots() {
+            const responseDiv = document.getElementById("notifySlotsResponse");
+            showLoading(responseDiv);
+
+            const phoneNumber = document.getElementById("notifySlotsPhone").value;
+            if (!phoneNumber) {
+                showResponse(responseDiv, "⚠️ Error: Phone number is required");
+                return;
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        showResponse(responseDiv, "✅ Notification sent!\n\n" + xhr.responseText);
+                    } else {
+                        showResponse(responseDiv, "❌ Error: " + xhr.status + "\n" + xhr.responseText);
+                    }
+                }
+            };
+            xhr.open("POST", BASE_URL + "/notifier/slots", true);
+            xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+            xhr.send(JSON.stringify({ phoneNumber: phoneNumber }));
+        }
+
+        /**
+         * 5. NOTIFY AIR QUALITY
+         */
+        function notifyAirQuality() {
+            const responseDiv = document.getElementById("notifyAqiResponse");
+            showLoading(responseDiv);
+
+            const phoneNumber = document.getElementById("notifyAqiPhone").value;
+            var ip = document.getElementById("notifyAqiIp").value || detectedIp;
+
+            if (!phoneNumber) {
+                showResponse(responseDiv, "⚠️ Error: Phone number is required");
+                return;
+            }
+
+            // If no IP yet, detect it now and retry
+            if (!ip) {
+                showResponse(responseDiv, "⏳ Detecting your IP... please try again in a moment.");
+                detectPublicIp(function (foundIp) {
+                    if (foundIp) {
+                        document.getElementById("notifyAqiIp").value = foundIp;
+                    }
+                });
+                return;
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        showResponse(responseDiv, "✅ Air Quality notification sent!\n\n" + xhr.responseText);
+                    } else {
+                        showResponse(responseDiv, "❌ Error: " + xhr.status + "\n" + xhr.responseText);
+                    }
+                }
+            };
+            xhr.open("POST", BASE_URL + "/notifier/airquality", true);
+            xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+            xhr.send(JSON.stringify({ phoneNumber: phoneNumber, ip: ip }));
         }
 
         /* ══════════════════════════════════════════════════════
